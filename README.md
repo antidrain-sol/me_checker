@@ -37,7 +37,7 @@
 
 ### Шаг 1: Клонирование репозитория
 ```bash
-git clone <ссылка на репозиторий>
+git clone https://github.com/antidrain-sol/me_checker
 cd me-checker
 ```
 
