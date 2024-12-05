@@ -79,6 +79,8 @@ async function mainMenu() {
 		return await mainMenu();
 	}
 
+	console.log(client.cookies);
+
 	spinner.succeed("Success logged in into magiceden account");
 
 	const answers = await inquirer.prompt([
@@ -107,7 +109,12 @@ async function mainMenu() {
 
 	spinner.info(`Total wallets: ${wallets.length}`);
 
-	const chunks = chunk(wallets, Math.ceil(wallets.length / config.max_threads));
+	const chunks = chunk(
+		wallets,
+		wallets.length > config.max_threads
+			? Math.ceil(wallets.length / config.max_threads)
+			: wallets.length,
+	);
 
 	const successesState = createState<UniversalWallet[]>([]);
 	const checkedState = createState<UniversalWallet[]>([]);
@@ -128,13 +135,9 @@ async function mainMenu() {
 				for (let i = 0; i < 5; i++) {
 					try {
 						const result = await client.linkWallet(wallet).then((r) => {
-							const e = r[0]?.result?.data?.json?.eligibility?.eligibility;
+							const e = r[0]?.result?.data?.json?.eligibility;
 
-							if (!e) {
-								// console.log(r[0].error.json.data);
-							}
-
-							return e;
+							return e?.eligibility;
 						});
 						if (result) {
 							if (result === "eligible") {
