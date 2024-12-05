@@ -2,6 +2,7 @@ import { Keypair } from "@solana/web3.js";
 import { randomBytes, uuidV4 } from "ethers";
 import bs58 from "bs58";
 import { UniversalWallet, WalletType } from "./wallets";
+import { load } from "cheerio";
 
 type Proxy = {
 	url: string;
@@ -64,6 +65,30 @@ export class Client {
 			.join("; ");
 	}
 
+	public async fetchTokens() {
+		const response = await this.request("https://mefoundation.com/wallets", {
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+				Accept:
+					"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+				"Accept-Language": "en-US,en;q=0.5",
+				"Upgrade-Insecure-Requests": "1",
+				"Sec-Fetch-Dest": "document",
+				"Sec-Fetch-Mode": "navigate",
+				"Sec-Fetch-Site": "cross-site",
+				Priority: "u=0, i",
+			},
+			method: "GET",
+		});
+
+		const html = await response.text();
+
+		return Number.parseFloat(
+			load(html)("button.inline-flex:nth-child(1)").text().replace(",", ""),
+		);
+	}
+
 	public async verifyAndCreate() {
 		const message = createMessage(this.uuid);
 		// const signature = nacl.sign.detached(decodeUTF8(message), kp.secretKey);
@@ -100,7 +125,7 @@ export class Client {
 						}),
 					},
 				);
-			} catch (e) {}
+			} catch (e) { }
 		}
 	}
 
