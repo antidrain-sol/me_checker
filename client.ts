@@ -91,7 +91,6 @@ export class Client {
 
 	public async verifyAndCreate() {
 		const message = createMessage(this.uuid);
-		// const signature = nacl.sign.detached(decodeUTF8(message), kp.secretKey);
 		const signature = await this.keypair.signMessage(message);
 
 		while (true) {
