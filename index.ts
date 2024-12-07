@@ -138,7 +138,7 @@ async function linkWallets(config: Config, spinner: Ora, client: Client) {
 	spinner.info(`Total wallets: ${wallets.length}`);
 
 	const chunkSize =
-		wallets.length > 200
+		wallets.length > config.max_threads
 			? Math.ceil(wallets.length / config.max_threads)
 			: wallets.length;
 	const chunks = chunk(wallets, chunkSize);
