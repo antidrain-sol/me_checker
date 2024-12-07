@@ -66,23 +66,25 @@ export class Client {
 	}
 
 	public async fetchTokens() {
-		const response = await this.request("https://mefoundation.com/wallets", {
-			headers: {
-				"User-Agent":
-					"Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
-				Accept:
-					"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-				"Accept-Language": "en-US,en;q=0.5",
-				"Upgrade-Insecure-Requests": "1",
-				"Sec-Fetch-Dest": "document",
-				"Sec-Fetch-Mode": "navigate",
-				"Sec-Fetch-Site": "cross-site",
-				Priority: "u=0, i",
+		const html = await this.request<string>(
+			"https://mefoundation.com/wallets",
+			{
+				headers: {
+					"User-Agent":
+						"Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+					Accept:
+						"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+					"Accept-Language": "en-US,en;q=0.5",
+					"Upgrade-Insecure-Requests": "1",
+					"Sec-Fetch-Dest": "document",
+					"Sec-Fetch-Mode": "navigate",
+					"Sec-Fetch-Site": "cross-site",
+					Priority: "u=0, i",
+				},
+				method: "GET",
 			},
-			method: "GET",
-		});
-
-		const html = await response.text();
+			true,
+		);
 
 		return Number.parseFloat(
 			load(html)("button.inline-flex:nth-child(1)").text().replace(",", ""),
@@ -95,7 +97,7 @@ export class Client {
 
 		while (true) {
 			try {
-				return await this.request(
+				return await this.request<{ success: boolean }>(
 					"https://api-mainnet.magiceden.io/v1/wallet/vestack/auth/verify-and-create-session",
 					{
 						method: "POST",
@@ -124,7 +126,7 @@ export class Client {
 						}),
 					},
 				);
-			} catch (e) { }
+			} catch (e) {}
 		}
 	}
 
@@ -163,48 +165,54 @@ export class Client {
 
 		const signature = await targetWallet.signMessage(message);
 
-		return this.request(
-			"https://mefoundation.com/api/trpc/auth.linkWallet?batch=1",
+		return this.request<
 			{
-				headers: {
-					accept: "*/*",
-					"accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-					baggage:
-						"sentry-environment=production,sentry-release=jY6mki4_Tqyy2LJT5ljgm,sentry-public_key=9db2fb508ab642eedd5d51bf3618740b,sentry-trace_id=fdac1520ca6c46a7afcc8f20fb119f2d,sentry-replay_id=c753b4fe121042339939e5a16010d415,sentry-sample_rate=0.05,sentry-sampled=true",
-					"content-type": "application/json",
-					"sec-ch-ua":
-						'"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-					"sec-ch-ua-mobile": "?0",
-					"sec-ch-ua-platform": '"Linux"',
-					"sec-fetch-dest": "empty",
-					"sec-fetch-mode": "cors",
-					"sec-fetch-site": "same-origin",
-					"sentry-trace": "fdac1520ca6c46a7afcc8f20fb119f2d-85f42afaefb3a189-1",
-					"x-trpc-source": "nextjs-react",
-					Referer: "https://mefoundation.com/wallets?eligible=false",
-					"Referrer-Policy": "strict-origin-when-cross-origin",
-				},
-				body: JSON.stringify({
-					"0": {
-						json: {
-							message,
-							chain: targetWallet.walletType.toLowerCase(),
-							wallet: await targetWallet.getAddress(),
-							signature: signature,
-							allocationEvent: "tge-airdrop-final",
-							isLedger: false,
-						},
-					},
-				}),
-				method: "POST",
+				result?: {
+					data?: {
+						json?: { eligibility?: { eligibility: "eligible" | "ineligible" } };
+					};
+				};
+			}[]
+		>("https://mefoundation.com/api/trpc/auth.linkWallet?batch=1", {
+			headers: {
+				accept: "*/*",
+				"accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+				baggage:
+					"sentry-environment=production,sentry-release=jY6mki4_Tqyy2LJT5ljgm,sentry-public_key=9db2fb508ab642eedd5d51bf3618740b,sentry-trace_id=fdac1520ca6c46a7afcc8f20fb119f2d,sentry-replay_id=c753b4fe121042339939e5a16010d415,sentry-sample_rate=0.05,sentry-sampled=true",
+				"content-type": "application/json",
+				"sec-ch-ua":
+					'"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+				"sec-ch-ua-mobile": "?0",
+				"sec-ch-ua-platform": '"Linux"',
+				"sec-fetch-dest": "empty",
+				"sec-fetch-mode": "cors",
+				"sec-fetch-site": "same-origin",
+				"sentry-trace": "fdac1520ca6c46a7afcc8f20fb119f2d-85f42afaefb3a189-1",
+				"x-trpc-source": "nextjs-react",
+				Referer: "https://mefoundation.com/wallets?eligible=false",
+				"Referrer-Policy": "strict-origin-when-cross-origin",
 			},
-		).then((r) => r.json());
+			body: JSON.stringify({
+				"0": {
+					json: {
+						message,
+						chain: targetWallet.walletType.toLowerCase(),
+						wallet: await targetWallet.getAddress(),
+						signature: signature,
+						allocationEvent: "tge-airdrop-final",
+						isLedger: false,
+					},
+				},
+			}),
+			method: "POST",
+		});
 	}
 
-	public async request(
+	public async request<T = unknown>(
 		input: RequestInfo,
 		init?: RequestInit,
-	): Promise<Response> {
+		toText?: boolean,
+	): Promise<T> {
 		const proxy = this.getLeastLoadedProxy();
 		if (!proxy) {
 			throw new Error("No available proxies.");
@@ -227,10 +235,19 @@ export class Client {
 				proxy: proxy.url,
 			});
 
+			const text = await response.text();
+
+			if (text.includes("Invalid session")) {
+				await this.verifyAndCreate();
+				await this.login();
+
+				return await this.request(input, init);
+			}
+
 			// Обработка Set-Cookie
 			this.parseAndStoreCookies(response.headers);
 
-			return response;
+			return toText ? text : JSON.parse(text);
 		} finally {
 			proxy.activeRequests--;
 		}

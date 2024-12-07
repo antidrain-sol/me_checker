@@ -76,9 +76,8 @@ async function mainMenu() {
 	);
 
 	await client.login();
-	const { success } = await client.verifyAndCreate().then((r) => r.json());
-
-	await client.login();
+	const { success } = await client.verifyAndCreate();
+	await await client.login();
 
 	if (!success || !client.cookies.has("session_signature")) {
 		spinner.fail("Failed to login into magiceden account");
